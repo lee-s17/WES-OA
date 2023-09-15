@@ -1,0 +1,27 @@
+#!/bin/bash
+#1collectmetrics.scripts
+
+#setdir
+softdir="/home/z6/Downloads/softwares"
+rawdata="/media/z6/DATADRIVE1/temuanjahai_wes/m3-backup/szemei/"
+maindir="/home/z6/Documents/WES/
+
+gatk="$softdir/gatk-4.2.3.0/./gatk"
+
+snp="$rawdata/joint_calling/results/gatk_VQSR_snp/OA.vcf.gz"
+indel="$rawdata/joint_calling/results/gatk_VQSR_indel/OA.vcf.gz"
+grchref="$rawdata/preprocessing/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
+dbsnp138="$rawdata/gatk_bundle/Homo_sapiens_assembly38.dbsnp138.vcf"
+
+out="$rawdata/jehai_temuan/postVC/metrics"
+
+#before VQSR filtering
+$gatk CollectVariantCallingMetrics -I $rawdata/joint_calling/results/gatk_selectvariants_snp/OA.vcf.gz \
+         --DBSNP $dbsnp138 -O $out/metrics_snpunfilt-dbsnp138 &
+$gatk CollectVariantCallingMetrics -I $rawdata/joint_calling/results/gatk_selectvariants_indel/OA.vcf.gz \
+         --DBSNP $dbsnp138 -O $out/metrics_indelunfilt-dbsnp138 
+
+#after VQSR filtering
+$gatk CollectVariantCallingMetrics -I $snp --DBSNP $dbsnp138 -O $out/metrics_snpVQSR-dbsnp138 &
+$gatk CollectVariantCallingMetrics -I $indel --DBSNP $dbsnp138 -O $out/metrics_indelVQSR-dbsnp138
+
