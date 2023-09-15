@@ -1,11 +1,14 @@
 #!/bin/bash
-#1collectmetrics.scripts
+set -e  #exit if any command fails
 
+#####1collectmetrics.script
 #setdir
 softdir="/home/z6/Downloads/softwares"
 rawdata="/media/z6/DATADRIVE1/temuanjahai_wes/m3-backup/szemei/"
 maindir="/home/z6/Documents/WES/
 
+##tools
+plink2="$softdir/./plink2"
 gatk="$softdir/gatk-4.2.3.0/./gatk"
 
 snp="$rawdata/joint_calling/results/gatk_VQSR_snp/OA.vcf.gz"
@@ -24,4 +27,45 @@ $gatk CollectVariantCallingMetrics -I $rawdata/joint_calling/results/gatk_select
 #after VQSR filtering
 $gatk CollectVariantCallingMetrics -I $snp --DBSNP $dbsnp138 -O $out/metrics_snpVQSR-dbsnp138 &
 $gatk CollectVariantCallingMetrics -I $indel --DBSNP $dbsnp138 -O $out/metrics_indelVQSR-dbsnp138
+
+
+#####2postfilt.script
+output="$maindir/WES/jehai_temuan/postVC/postVQSR"
+
+dbsnp155="$maindir/gatk_bundle/Human_GRCh38.dbSNP155.vcf.gz"
+ref="$rawdata/preprocessing/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
+
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate vcf
+#collect variants passed VQSR
+bcftools view -f PASS $snp | bgzip -c > $output/pass-OA_snp.vcf.gz
+bcftools view -f PASS $indel | bgzip -c > $output/pass-OA_indel.vcf.gz
+tabix -p vcf $output/pass-OA_snp.vcf.gz
+tabix -p vcf $output/pass-OA_indel.vcf.gz
+#annotate using dbsnp155
+gatk VariantAnnotator -R $ref -V $output/pass-OA_snp.vcf.gz --dbsnp $dbsnp155 -O $output/annpass-OA_snp.vcf.gz
+gatk VariantAnnotator -R $ref -V $output/pass-OA_indel.vcf.gz --dbsnp $dbsnp155 -O $output/annpass-OA_indel.vcf.gz
+
+#main file for downstream
+passsnp="$output/annpass-OA_snp.vcf.gz"
+passindel="$output/annpass-OA_indel.vcf.gz"
+passbn="$(basename $passsnp | cut -d "_" -f 1)"
+
+#biallelic
+$gatk SelectVariants -V $passsnp  -O $output/"$passbn"_biallsnp.vcf.gz -select-type-to-include SNP --restrict-alleles-to BIALLELIC
+$gatk SelectVariants -V $passindel  -O $output/"$passbn"_bindel.vcf.gz -select-type-to-include INDEL --restrict-alleles-to BIALLELIC
+
+#filter by hwe/geno; familial relationship (non-autosomal will be excluded by king and plink pca tools themselves)
+$plink2 --set-all-var-ids @:# --hwe 10e-6 --geno 0.05 --out $output/"$passbn"-genohwebiallsnp --make-bed \
+        --vcf $output/"$passbn"_biallsnp.vcf.gz#
+$plink2 --king-table-filter 0.177 --bfile $output/"$passbn"-genohwebiallsnp --out $output/king1table --make-king-table
+$plink2 --king-cutoff 0.177 --bfile $output/"$passbn"-genohwebiallsnp --out $output/king1table#
+
+#define file for king-removed individuals
+king="$output/king1table.king.cutoff.out.id"#
+
+#filter geno, hwe, king- make bed
+$plink2 --set-all-var-ids @:# --hwe 10e-6 --geno 0.05 --remove $king \
+        --out $output/"$passbn"-genohweking-biallsnp --make-bed \
+        --vcf $output/"$passbn"_biallsnp.vcf.gz
 
