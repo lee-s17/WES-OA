@@ -44,13 +44,17 @@ SNPBCF_VEP_HGDP<-  select(SNPBCF_VEP_HGDP, !c(55,56,57))
 
 
 #####dDAF and Fst
-ancestralSNPBCF_VEP <- select(SNPBCF_VEP_HGDP, 1,37,40,41,42,43,44,49,52,55,56,57,59:63)  %>% distinct() 
+ancestralSNPBCF_VEP <- select(SNPBCF_VEP_HGDP, 1,2,34,40:42,46,49,51:54)  %>% distinct() 
 ancestralSNPBCF_VEP <- ancestralSNPBCF_VEP %>%
-  mutate(DAF_JH = ifelse(REF == toupper(AA_VEP.e110), AF_JH, 1 - AF_JH )) %>%
-  mutate(DAF_TM = ifelse(REF == toupper(AA_VEP.e110), AF_TM, 1 - AF_TM ))
+  mutate(DAF_JH = ifelse(REF == toupper(AA_VEP.e110), AF_JH, ifelse(ALT == toupper(AA_VEP.e110), 1 - AF_JH,
+                                                                    ifelse(REF == AA_chimp, AF_JH, ifelse(ALT == AA_chimp, 1 - AF_JH, NA))))) %>%
+  mutate(DAF_TM = ifelse(REF == toupper(AA_VEP.e110), AF_TM, ifelse(ALT == toupper(AA_VEP.e110), 1 - AF_TM,
+                                                                    ifelse(REF == AA_chimp, AF_TM, ifelse(ALT == AA_chimp, 1 - AF_TM, NA))))) 
+
 ancestralSNPBCF_VEP$dDAF_WES<- abs(ancestralSNPBCF_VEP$DAF_JH- ancestralSNPBCF_VEP$DAF_TM)
 ancestralSNPBCF_VEP$dDAF_WES<- as.numeric(as.character(format(round(ancestralSNPBCF_VEP$dDAF_WES, 4), nsmall = 4)))
 
+                      
 fst <- read.table("fstWES-ORG-annpass-genohweking_biallsnp.JH.TM.fst.var",header = TRUE)
 fstx <- read.table("fstWES-ORG-annpass-genohweking_biallsnp.x.JH.TM.fst.var",header = TRUE)
 fstall <- rbind(fst,fstx)
