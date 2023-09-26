@@ -1,0 +1,60 @@
+#!/bin/bash
+
+input="/media/z6/DATADRIVE1/rawhgdp"
+output="/home/z6/Documents/workingdir/WES/postVC/e110post/hgdp"
+
+##call gatk
+plink2="/home/z6/Documents/workingdir/softwares/./plink2"
+gatk="/home/z6/Documents/workingdir/softwares/gatk-4.4.0.0/./gatk"
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate gatk
+
+#######Input: select variants in ORG
+for file in  $(ls $input*.vcf.gz); do
+        bn="$(basename "$file" | cut -c24-)"
+        $gatk SelectVariants -O $output/org_$bn  -V $file --L /home/z6/Documents/workingdir/WES/bedfile/e110/e110final.list
+done
+
+for k in {1..22}; do
+  echo $input/org_chr$k.vcf.gz >> $output/count.txt
+  zgrep -v "#" $input/org_chr$k.vcf.gz | wc -l >> $output/count.txt
+done
+#concatenate org variants
+for k in {1..22}; do 
+  echo $output/org_chr$k.vcf.gz >> $output/list
+  done 
+
+conda deactivate
+source /home/z6/mambaforge/etc/profile.d/conda.sh 
+conda activate bcftools
+
+str=$(less $output/list)
+bcftools concat  $str -Oz -o $output/org-auto.vcf.gz
+tabix -p vcf $output/org-auto.vcf.gz
+
+
+
+#######Select variant in ORG based on types
+        $gatk SelectVariants -V $output/org-auto.vcf.gz -O $output/org-snps_auto.vcf.gz --select-type-to-include SNP
+        $gatk SelectVariants -V $output/org-auto.vcf.gz -O $output/org-biallsnps_auto.vcf.gz --select-type-to-include SNP --restrict-alleles-to BIALLELIC
+        $gatk SelectVariants -V $output/org-auto.vcf.gz -O $output/org-bindels_auto.vcf.gz --select-type-to-include INDEL --restrict-alleles-to BIALLELIC
+        $gatk SelectVariants -V $output/org-auto.vcf.gz -O $output/org-indels_auto.vcf.gz --select-type-to-include INDEL 
+        $gatk SelectVariants -V $output/org-auto.vcf.gz -O $output/org-mixed_auto.vcf.gz --select-type-to-include MIXED
+        
+for t in $(ls $output/org-*_auto.vcf.gz); do 
+  echo $t >> $output/count.txt
+  zgrep -v "#" $t | wc -l >> $output/count.txt
+done
+
+#get allele freq
+cd $output
+for file in $(ls org-auto.vcf.gz org_chrX.vcf.gz); do
+        bcftools view -S hgdpsample-king $file -o bcf-hgdp"$(basename $file | cut -d "." -f 1)" 
+        bcftools +fill-tags bcf-hgdp"$(basename $file | cut -d "." -f 1)" -o bcfann-hgdp"$(basename $file | cut -d "." -f 1)"  -- -S /home/z6/Documents/workingdir/hgdpdec20/2022hgdp/vcf_org/kingfilter-afrnon-sample-region -t AN,AC,AF 
+        echo "CHROM POS ID REF ALT AA_chimp AN AF AC AN_AFR AF_AFR AC_AFR AN_NONAFR AF_NONAFR AC_NONAFR" | sed 's/ /\t/g' >> bcfannfreq-hgdp"$(basename $file | cut -d "." -f 1)" 
+        bcftools query --format  \
+        '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%INFO/AA_chimp\t%INFO/AN\t%INFO/AF\t%INFO/AC\t%INFO/AN_AFR\t%INFO/AF_AFR\t%INFO/AC_AFR\t%INFO/AN_NONAFR\t%INFO/AF_NONAFR\t%INFO/AC_NONAFR\n' \
+        bcfann-hgdp"$(basename $file | cut -d "." -f 1)" >> bcfannfreq-hgdp"$(basename $file | cut -d "." -f 1)";
+done
+
+/home/z6/Downloads/softwares/./plink2 --bfile hgdp-org-genohweking-biallsnpsauto --fst PHENO2 method=hudson report-variants --out fst-afrnon-hgdp-org-genohweking-biallsnpsauto
