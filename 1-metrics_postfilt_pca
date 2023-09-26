@@ -16,7 +16,7 @@ indel="$rawdata/joint_calling/results/gatk_VQSR_indel/OA.vcf.gz"
 grchref="$rawdata/preprocessing/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
 dbsnp138="$rawdata/gatk_bundle/Homo_sapiens_assembly38.dbsnp138.vcf"
 
-out="$rawdata/jehai_temuan/postVC/metrics"
+out="$rawdata/postVC/metrics"
 
 #before VQSR filtering
 $gatk CollectVariantCallingMetrics -I $rawdata/joint_calling/results/gatk_selectvariants_snp/OA.vcf.gz \
@@ -30,7 +30,7 @@ $gatk CollectVariantCallingMetrics -I $indel --DBSNP $dbsnp138 -O $out/metrics_i
 
 
 #####2postfilt.script
-output="$maindir/WES/jehai_temuan/postVC/postVQSR"
+output="$maindir/WES/postVC/postVQSR"
 
 dbsnp155="$maindir/gatk_bundle/Human_GRCh38.dbSNP155.vcf.gz"
 ref="$rawdata/preprocessing/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
@@ -75,17 +75,17 @@ $plink2 --set-all-var-ids @:# --hwe 10e-6 --geno 0.05 --remove $king \
 
 
 #####3PCA-script
-mkdir $maindir/jehai_temuan/postVC/pca
-cd $maindir/jehai_temuan/postVC/pca
+mkdir $maindir/postVC/pca
+cd $maindir/postVC/pca
 
 #use bcftools to select variants in OA (pca-OA-genohweking-biallsnp.list) from references
 gatk SelectVariants --L pca-OA-genohweking-biallsnp.list -V /media/z6/DATADRIVE1/VCF-NAS/hg38_vcf/full/oa-biallasnps-auto.vcf.gz  -O pca-OAWGS.vcf.gz
 gatk SelectVariants --L pca-OA-genohweking-biallsnp.list -V /media/z6/DATADRIVE1/rawhgdp/hgdpwhole_biallsnps/biallsnps_autosomes.vcf.gz  -O pca-hgdp.vcf.gz
 bcftools annotate -x  FORMAT/AD pca-hgdp.vcf.gz | bgzip -c > pca-annhgdp.vcf.gz 
 tabix -p vcf pca-annhgdp.vcf.gz 
-gatk SelectVariants --L pca-OA-genohweking-biallsnp.list -V $maindir/jehai_temuan/postVC/pca/Andamanese/Andamanese-hg38.vcf.gz  -O pca-Andaman.vcf.gz
+gatk SelectVariants --L pca-OA-genohweking-biallsnp.list -V $maindir/postVC/pca/Andamanese/Andamanese-hg38.vcf.gz  -O pca-Andaman.vcf.gz
 
-gatk SelectVariants --L pca-OA-genohweking-biallsnp.list -V $maindir/jehai_temuan/postVC/postVQSR/annpass-OA_biallsnp.vcf.gz  -O pca-OAWES.vcf.gz
+gatk SelectVariants --L pca-OA-genohweking-biallsnp.list -V $maindir/postVC/postVQSR/annpass-OA_biallsnp.vcf.gz  -O pca-OAWES.vcf.gz
 #merge ref and OA
 bcftools merge -Oz -o merged-allwAndaman.vcf.gz  pca-annhgdp.vcf.gz pca-OAWGS.vcf.gz pca-OAWES.vcf.gz pca-Andaman.vcf.gz
 tabix -p vcf merged-allwAndaman.vcf.gz
