@@ -5,21 +5,21 @@ plink2="/home/z6/Documents/workingdir/softwares/./plink2"
 gatk="/home/z6/Documents/workingdir/softwares/gatk-4.4.0.0/./gatk"
 
 #intersect Agilent WES and 1000GP strict mask
-cd /home/z6/Documents/workingdir/WES/jehai_temuan/bedfile
+cd /home/z6/Documents/workingdir/WES/bedfile
 bedtools intersect  -a Agilentv6r2_hg38/S07604514_Regions.bed -b 20160622_genome_mask_GRCh38/StrictMask/20160622.allChr.mask.bed > intersect-agilent_strict1000gp.bed
 #intersect Agilent WES-1000GP Strict Mask and ORG
 bedtools intersect -a e110/e110finalformat.bed -b intersect-agilent_strict1000gp.bed -wao > e110ff_agilent-strict1000gp.txt
 
 
 ######choose ORG variants
-oute110="/home/z6/Documents/workingdir/WES/jehai_temuan/postVC/e110post"
-ORGlist="/home/z6/Documents/workingdir/WES/jehai_temuan/bedfile/e110/e110final.list"
+oute110="/home/z6/Documents/workingdir/WES/postVC/e110post"
+ORGlist="/home/z6/Documents/workingdir/WES/bedfile/e110/e110final.list"
 
 source ~/anaconda3/etc/profile.d/conda.sh
 conda activate gatk
 
-passsnp="/home/z6/Documents/workingdir/WES/jehai_temuan/postVC/postVQSR/annpass-OA_snp.vcf.gz"
-passindel="/home/z6/Documents/workingdir/WES/jehai_temuan/postVC/postVQSR/annpass-OA_indel.vcf.gz"
+passsnp="/home/z6/Documents/workingdir/WES/postVC/postVQSR/annpass-OA_snp.vcf.gz"
+passindel="/home/z6/Documents/workingdir/WES/postVC/postVQSR/annpass-OA_indel.vcf.gz"
 passbn="$(basename $passsnp | cut -d "_" -f 1)"
 
 $gatk SelectVariants -V $passsnp  -O $oute110/ORG-"$passbn"_snp.vcf.gz --L $ORGlist
@@ -31,19 +31,19 @@ $gatk SelectVariants -V $oute110/ORG-"$passbn"_indel.vcf.gz  -O $oute110/ORG-"$p
 
 #plink filter geno/ hwe
 $plink2 --set-all-var-ids @:# --hwe 10e-6 --geno 0.05 \
-	--remove /home/z6/Documents/workingdir/WES/jehai_temuan/postVC/postVQSR/king1table.king.cutoff.out.id \
+	--remove /home/z6/Documents/workingdir/WES/postVC/postVQSR/king1table.king.cutoff.out.id \
     --out $oute110/ORG-annpass-genohweking_biallsnp --make-bed --vcf $oute110/ORG-"$passbn"_biallsnp.vcf.gz \
-    --update-sex /home/z6/Documents/workingdir/WES/jehai_temuan/postVC/e110post/sexf.txt
+    --update-sex /home/z6/Documents/workingdir/WES/postVC/e110post/sexf.txt
 $plink2 --set-all-var-ids @:# --hwe 10e-6 --geno 0.05 \
-	--remove /home/z6/Documents/workingdir/WES/jehai_temuan/postVC/postVQSR/king1table.king.cutoff.out.id \
+	--remove /home/z6/Documents/workingdir/WES/postVC/postVQSR/king1table.king.cutoff.out.id \
     --out $oute110/ORG-annpass-genohweking_indel --make-bed --vcf $oute110/ORG-"$passbn"_bindel.vcf.gz \
-    --update-sex /home/z6/Documents/workingdir/WES/jehai_temuan/postVC/e110post/sexf.txt
+    --update-sex /home/z6/Documents/workingdir/WES/postVC/e110post/sexf.txt
 conda deactivate
 
 
 ######annotate vcf files
-pop="/home/z6/Documents/workingdir/WES/jehai_temuan/postVC/postVQSR/bcf-pop.txt"
-region="/home/z6/Documents/workingdir/WES/jehai_temuan/postVC/postVQSR/bcf-region.txt"
+pop="/home/z6/Documents/workingdir/WES/postVC/postVQSR/bcf-pop.txt"
+region="/home/z6/Documents/workingdir/WES/postVC/postVQSR/bcf-region.txt"
 source /home/z6/mambaforge/etc/profile.d/conda.sh 
 conda activate bcftools
 
@@ -76,5 +76,5 @@ do
         grep -v "#" $oute110/vep-$bn | cut --complement -f 8-12,26-34,39-43,50-69,76-80 >> $oute110/vep-cut-$bn;
 done
 #Match ENSG
-awk -F'\t' 'NR==FNR{c[$2]++;next};c[$4]' /home/z6/Documents/workingdir/WES/jehai_temuan/bedfile/e110/org-e110-master.list $oute110/vep-cut-ORG-annpass-OA_indel.vcf.gz > $oute110/matchensg-vep-cut-ORG-annpass-OA_indel
-awk -F'\t' 'NR==FNR{c[$2]++;next};c[$4]' /home/z6/Documents/workingdir/WES/jehai_temuan/bedfile/e110/org-e110-master.list $oute110/vep-cut-ORG-annpass-OA_snp.vcf.gz > $oute110/matchensg-vep-cut-ORG-annpass-OA_snp
+awk -F'\t' 'NR==FNR{c[$2]++;next};c[$4]' /home/z6/Documents/workingdir/WES/bedfile/e110/org-e110-master.list $oute110/vep-cut-ORG-annpass-OA_indel.vcf.gz > $oute110/matchensg-vep-cut-ORG-annpass-OA_indel
+awk -F'\t' 'NR==FNR{c[$2]++;next};c[$4]' /home/z6/Documents/workingdir/WES/bedfile/e110/org-e110-master.list $oute110/vep-cut-ORG-annpass-OA_snp.vcf.gz > $oute110/matchensg-vep-cut-ORG-annpass-OA_snp
