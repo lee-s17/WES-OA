@@ -46,5 +46,14 @@ for t in $(ls $output/org-*_auto.vcf.gz); do
   zgrep -v "#" $t | wc -l >> $output/count.txt
 done
 
+cd $output
+for file in $(ls org-auto.vcf.gz org_chrX.vcf.gz); do
+        bcftools view -S hgdpsample-king $file -o bcf-hgdp"$(basename $file | cut -d "." -f 1)" --force-samples
+        bcftools +fill-tags bcf-hgdp"$(basename $file | cut -d "." -f 1)" -o bcfann-hgdp"$(basename $file | cut -d "." -f 1)"  -- -S /home/z6/Documents/workingdir/hgdpdec20/2022hgdp/vcf_org/kingfilter-afrnon-sample-region -t AN,AC,AF  
+        echo "CHROM POS ID REF ALT AA_chimp AN AF AC AN_AFR AF_AFR AC_AFR AN_NONAFR AF_NONAFR AC_NONAFR" | sed 's/ /\t/g' >> bcfannfreq-hgdp"$(basename $file | cut -d "." -f 1)" 
+        bcftools query --format  \
+        '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%INFO/AA_chimp\t%INFO/AN\t%INFO/AF\t%INFO/AC\t%INFO/AN_AFR\t%INFO/AF_AFR\t%INFO/AC_AFR\t%INFO/AN_NONAFR\t%INFO/AF_NONAFR\t%INFO/AC_NONAFR\n' \
+        bcfann-hgdp"$(basename $file | cut -d "." -f 1)" >> bcfannfreq-hgdp"$(basename $file | cut -d "." -f 1)";
+done
 
 
